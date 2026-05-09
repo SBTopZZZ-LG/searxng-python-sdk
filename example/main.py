@@ -1,7 +1,11 @@
 """Example usage of the SearXNG Python SDK."""
 
-from searxng_search import SearXNG, SearXNGBaseConfiguration, SearXNGSearchConfiguration, \
-    Category
+from searxng_search import (
+    Category,
+    SearXNG,
+    SearXNGBaseConfiguration,
+    SearXNGSearchConfiguration,
+)
 
 
 async def main():
