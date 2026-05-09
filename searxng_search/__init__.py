@@ -1,25 +1,25 @@
 """SearXNG Python SDK."""
 
 from .searxng_search import (
-    SearXNG,
-    SearXNGBaseConfiguration,
-    SearXNGSearchConfiguration,
-    Category,
-    TimeRange,
     Autocomplete,
-    SafeSearch,
-    Theme,
-    Plugins,
-    SearXNGResponse,
+    Category,
+    FileResult,
     GeneralOrNewsResult,
     ImageResult,
-    VideoResult,
-    MapResult,
     ITResult,
-    ScienceResult,
+    MapResult,
     MusicResult,
-    FileResult,
+    Plugins,
+    SafeSearch,
+    ScienceResult,
+    SearXNG,
+    SearXNGBaseConfiguration,
+    SearXNGResponse,
+    SearXNGSearchConfiguration,
     SocialMediaResult,
+    Theme,
+    TimeRange,
+    VideoResult,
 )
 
 __all__ = [

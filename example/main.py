@@ -17,8 +17,7 @@ async def main():
     )
 
     search_config = SearXNGSearchConfiguration(
-        query="python=sdk",
-        categories={Category.GENERAL, Category.IMAGES}
+        query="python=sdk", categories={Category.GENERAL, Category.IMAGES}
     )
 
     searxng = SearXNG(base_configuration=base_config)
@@ -33,4 +32,5 @@ async def main():
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(main())

@@ -1,9 +1,10 @@
 """Logging utilities for the SearXNG Python SDK."""
 
-import logging
 import functools
+import logging
 
 logging.getLogger("my_library").addHandler(logging.NullHandler())
+
 
 def get_logger(name: str) -> logging.Logger:
     """Get a logger with the specified name."""

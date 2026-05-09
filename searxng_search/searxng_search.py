@@ -1,20 +1,20 @@
 """SearXNG Search Module Implementation."""
 
-from typing import Optional, Union
+from enum import StrEnum
 from urllib.parse import quote
 
 import httpx
 from bs4 import BeautifulSoup
 from pydantic import Field
 from pydantic.dataclasses import dataclass
-from enum import StrEnum
+
 from ._http_url import HttpUrl as _HttpUrl
 from ._logger import get_logger, log_errors
-
 
 SEARXNG_FORMAT = "html"
 
 _logger = get_logger(__name__)
+
 
 class Category(StrEnum):
     """Enum representing search result categories in SearXNG."""
@@ -88,7 +88,7 @@ class SearXNGBaseConfiguration:
     """
 
     base_url: _HttpUrl
-    user_agent: Optional[str] = None
+    user_agent: str | None = None
 
 
 @dataclass
@@ -98,9 +98,9 @@ class GeneralOrNewsResult:
     category: str
     title: str
     url: _HttpUrl
-    description: Optional[str] = None
-    author: Optional[str] = None
-    timestamp: Optional[str] = None
+    description: str | None = None
+    author: str | None = None
+    timestamp: str | None = None
 
 
 @dataclass
@@ -110,10 +110,10 @@ class ImageResult:
     category: str
     title: str
     url: _HttpUrl
-    description: Optional[str] = None
-    image_url: Optional[str] = None
-    thumbnail_url: Optional[str] = None
-    image_resolution: Optional[str] = None
+    description: str | None = None
+    image_url: str | None = None
+    thumbnail_url: str | None = None
+    image_resolution: str | None = None
 
 
 @dataclass
@@ -123,10 +123,10 @@ class VideoResult:
     category: str
     title: str
     url: _HttpUrl
-    description: Optional[str] = None
-    video_thumbnail_url: Optional[str] = None
-    video_length: Optional[str] = None
-    author: Optional[str] = None
+    description: str | None = None
+    video_thumbnail_url: str | None = None
+    video_length: str | None = None
+    author: str | None = None
 
 
 @dataclass
@@ -136,7 +136,7 @@ class MapResult:
     category: str
     title: str
     url: _HttpUrl
-    description: Optional[str] = None
+    description: str | None = None
 
 
 @dataclass
@@ -146,9 +146,9 @@ class ITResult:
     category: str
     title: str
     url: _HttpUrl
-    description: Optional[str] = None
-    author: Optional[str] = None
-    timestamp: Optional[str] = None
+    description: str | None = None
+    author: str | None = None
+    timestamp: str | None = None
 
 
 @dataclass
@@ -158,7 +158,7 @@ class ScienceResult:
     category: str
     title: str
     url: _HttpUrl
-    description: Optional[str] = None
+    description: str | None = None
 
 
 @dataclass
@@ -168,10 +168,10 @@ class MusicResult:
     category: str
     title: str
     url: _HttpUrl
-    description: Optional[str] = None
-    artist: Optional[str] = None
-    timestamp: Optional[str] = None
-    music_video_thumbnail_url: Optional[str] = None
+    description: str | None = None
+    artist: str | None = None
+    timestamp: str | None = None
+    music_video_thumbnail_url: str | None = None
 
 
 @dataclass
@@ -181,10 +181,10 @@ class FileResult:
     category: str
     title: str
     url: _HttpUrl
-    description: Optional[str] = None
-    file_url: Optional[str] = None
-    file_thumbnail_url: Optional[str] = None
-    timestamp: Optional[str] = None
+    description: str | None = None
+    file_url: str | None = None
+    file_thumbnail_url: str | None = None
+    timestamp: str | None = None
 
 
 @dataclass
@@ -194,22 +194,22 @@ class SocialMediaResult:
     category: str
     title: str
     url: _HttpUrl
-    description: Optional[str] = None
-    thumbnail_url: Optional[str] = None
-    timestamp: Optional[str] = None
+    description: str | None = None
+    thumbnail_url: str | None = None
+    timestamp: str | None = None
 
 
-_SearxngSearchResult = Union[
-    GeneralOrNewsResult,
-    ImageResult,
-    VideoResult,
-    MapResult,
-    ITResult,
-    ScienceResult,
-    MusicResult,
-    FileResult,
-    SocialMediaResult,
-]
+_SearxngSearchResult = (
+    GeneralOrNewsResult
+    | ImageResult
+    | VideoResult
+    | MapResult
+    | ITResult
+    | ScienceResult
+    | MusicResult
+    | FileResult
+    | SocialMediaResult
+)
 
 
 @dataclass
@@ -251,21 +251,21 @@ class SearXNGSearchConfiguration:
     """
 
     query: str = Field(min_length=1, description="The search query string.")
-    custom_params: Optional[dict[str, str]] = None
-    custom_headers: Optional[dict[str, str]] = None
-    categories: Optional[set[Category | str]] = None
-    engines: Optional[set[str]] = None
-    page_number: Optional[int] = None
-    time_range: Optional[TimeRange | str] = None
-    results_on_new_tab: Optional[bool] = None
-    image_proxy: Optional[bool] = None
-    autocomplete: Optional[set[Autocomplete | str]] = None
-    safe_search: Optional[SafeSearch | int] = None
-    theme: Optional[set[Theme | str]] = None
-    enabled_plugins: Optional[set[Plugins | str]] = None
-    disabled_plugins: Optional[set[Plugins | str]] = None
-    enabled_engines: Optional[set[str]] = None
-    disabled_engines: Optional[set[str]] = None
+    custom_params: dict[str, str] | None = None
+    custom_headers: dict[str, str] | None = None
+    categories: set[Category | str] | None = None
+    engines: set[str] | None = None
+    page_number: int | None = None
+    time_range: TimeRange | str | None = None
+    results_on_new_tab: bool | None = None
+    image_proxy: bool | None = None
+    autocomplete: set[Autocomplete | str] | None = None
+    safe_search: SafeSearch | int | None = None
+    theme: set[Theme | str] | None = None
+    enabled_plugins: set[Plugins | str] | None = None
+    disabled_plugins: set[Plugins | str] | None = None
+    enabled_engines: set[str] | None = None
+    disabled_engines: set[str] | None = None
 
 
 class SearXNG:
@@ -277,13 +277,15 @@ class SearXNG:
     def _urlencode_set(self, items: set) -> str:
         if items is None:
             return ""
-        return ",".join(quote(str(item), safe='') for item in items)
+        return ",".join(quote(str(item), safe="") for item in items)
 
     def _urlencode_custom_params(self, custom_params: dict[str, str]) -> str:
         if custom_params is None:
             return ""
-        return "&".join(f"{quote(param_name, safe='')}={quote(param_value, safe='')}" \
-            for param_name, param_value in custom_params.items())
+        return "&".join(
+            f"{quote(param_name, safe='')}={quote(param_value, safe='')}"
+            for param_name, param_value in custom_params.items()
+        )
 
     def _urlencode_boolean(
         self,
@@ -295,20 +297,30 @@ class SearXNG:
             return mapping_for_true
         return mapping_for_false
 
-    def _build_search_url(self, search_configuration: SearXNGSearchConfiguration) -> str:
+    def _build_search_url(
+        self, search_configuration: SearXNGSearchConfiguration
+    ) -> str:
         base_url = self.base_configuration.base_url.rstrip("/")
         search_url = f"{base_url}/search?format={SEARXNG_FORMAT}&q={quote(search_configuration.query, safe='')}"
 
         if search_configuration.custom_params is not None:
-            search_url += f"&{self._urlencode_custom_params(search_configuration.custom_params)}"
+            search_url += (
+                f"&{self._urlencode_custom_params(search_configuration.custom_params)}"
+            )
         if search_configuration.categories is not None:
-            search_url += f"&categories={self._urlencode_set(search_configuration.categories)}"
+            search_url += (
+                f"&categories={self._urlencode_set(search_configuration.categories)}"
+            )
         if search_configuration.engines is not None:
-            search_url += f"&engines={self._urlencode_set(search_configuration.engines)}"
+            search_url += (
+                f"&engines={self._urlencode_set(search_configuration.engines)}"
+            )
         if search_configuration.page_number is not None:
             search_url += f"&page={search_configuration.page_number}"
         if search_configuration.time_range is not None:
-            search_url += f"&time_range={quote(search_configuration.time_range, safe='')}"
+            search_url += (
+                f"&time_range={quote(search_configuration.time_range, safe='')}"
+            )
         if search_configuration.results_on_new_tab is not None:
             search_url += f"&newtab={self._urlencode_boolean(search_configuration.results_on_new_tab, 'on', 'off')}"
         if search_configuration.image_proxy is not None:
@@ -330,7 +342,7 @@ class SearXNG:
 
         return search_url
 
-    def _parse_general_or_news(self, article) -> Optional[GeneralOrNewsResult]:
+    def _parse_general_or_news(self, article) -> GeneralOrNewsResult | None:
         url_tag = article.select_one("a.url_header")
         title_tag = article.select_one("h3 a")
         if not url_tag or not title_tag:
@@ -344,13 +356,16 @@ class SearXNG:
             category="general-or-news",
             url=url_tag["href"],
             title=title_tag.get_text(strip=True),
-            description=description_tag.get_text(strip=True) if description_tag else None,
+            description=description_tag.get_text(strip=True)
+            if description_tag
+            else None,
             author=author_tag.get_text(strip=True) if author_tag else None,
-            timestamp=time_tag.get("datetime") or time_tag.get_text(strip=True) \
-                if time_tag else None,
+            timestamp=time_tag.get("datetime") or time_tag.get_text(strip=True)
+            if time_tag
+            else None,
         )
 
-    def _parse_images(self, article) -> Optional[ImageResult]:
+    def _parse_images(self, article) -> ImageResult | None:
         url_tag = article.select_one("a[href]")
         title_tag = article.select_one("span.title")
         if not url_tag or not title_tag:
@@ -364,13 +379,17 @@ class SearXNG:
             category="images",
             url=url_tag["href"],
             title=title_tag.get_text(strip=True),
-            description=description_tag.get_text(strip=True) if description_tag else None,
+            description=description_tag.get_text(strip=True)
+            if description_tag
+            else None,
             image_url=url_tag["href"],
             thumbnail_url=thumbnail_tag["src"] if thumbnail_tag else None,
-            image_resolution=resolution_tag.get_text(strip=True) if resolution_tag else None,
+            image_resolution=resolution_tag.get_text(strip=True)
+            if resolution_tag
+            else None,
         )
 
-    def _parse_videos(self, article) -> Optional[VideoResult]:
+    def _parse_videos(self, article) -> VideoResult | None:
         url_tag = article.select_one("a.url_header")
         title_tag = article.select_one("h3 a")
         if not url_tag or not title_tag:
@@ -380,8 +399,11 @@ class SearXNG:
         length_tag = article.select_one("span.thumbnail_length")
         author_tag = article.select_one("div.highlight")
         description_tags = article.select("> p")
-        description = description_tags[1].get_text(strip=True) \
-            if len(description_tags) > 1 else None
+        description = (
+            description_tags[1].get_text(strip=True)
+            if len(description_tags) > 1
+            else None
+        )
 
         return VideoResult(
             category="videos",
@@ -393,7 +415,7 @@ class SearXNG:
             author=author_tag.get_text(strip=True) if author_tag else None,
         )
 
-    def _parse_map(self, article) -> Optional[MapResult]:
+    def _parse_map(self, article) -> MapResult | None:
         url_tag = article.select_one("a.url_header")
         title_tag = article.select_one("h3 a")
         if not url_tag or not title_tag:
@@ -405,10 +427,12 @@ class SearXNG:
             category="map",
             url=url_tag["href"],
             title=title_tag.get_text(strip=True),
-            description=description_tag.get_text(strip=True) if description_tag else None,
+            description=description_tag.get_text(strip=True)
+            if description_tag
+            else None,
         )
 
-    def _parse_it(self, article) -> Optional[ITResult]:
+    def _parse_it(self, article) -> ITResult | None:
         url_tag = article.select_one("a.url_header")
         title_tag = article.select_one("h3 a")
         if not url_tag or not title_tag:
@@ -422,13 +446,16 @@ class SearXNG:
             category="it",
             url=url_tag["href"],
             title=title_tag.get_text(strip=True),
-            description=description_tag.get_text(strip=True) if description_tag else None,
+            description=description_tag.get_text(strip=True)
+            if description_tag
+            else None,
             author=author_tag.get_text(strip=True) if author_tag else None,
-            timestamp=time_tag.get("datetime") or time_tag.get_text(strip=True) \
-                if time_tag else None,
+            timestamp=time_tag.get("datetime") or time_tag.get_text(strip=True)
+            if time_tag
+            else None,
         )
 
-    def _parse_science(self, article) -> Optional[ScienceResult]:
+    def _parse_science(self, article) -> ScienceResult | None:
         url_tag = article.select_one("a")
         title_tag = article.select_one("h3") or article.select_one("h2")
         if not url_tag or not title_tag:
@@ -440,10 +467,12 @@ class SearXNG:
             category="science",
             url=url_tag["href"],
             title=title_tag.get_text(strip=True),
-            description=description_tag.get_text(strip=True) if description_tag else None,
+            description=description_tag.get_text(strip=True)
+            if description_tag
+            else None,
         )
 
-    def _parse_music(self, article) -> Optional[MusicResult]:
+    def _parse_music(self, article) -> MusicResult | None:
         url_tag = article.select_one("a.url_header")
         title_tag = article.select_one("h3 a")
         if not url_tag or not title_tag:
@@ -458,14 +487,17 @@ class SearXNG:
             category="music",
             url=url_tag["href"],
             title=title_tag.get_text(strip=True),
-            description=description_tag.get_text(strip=True) if description_tag else None,
+            description=description_tag.get_text(strip=True)
+            if description_tag
+            else None,
             artist=artist_tag.get_text(strip=True) if artist_tag else None,
-            timestamp=time_tag.get("datetime") or time_tag.get_text(strip=True) \
-                if time_tag else None,
+            timestamp=time_tag.get("datetime") or time_tag.get_text(strip=True)
+            if time_tag
+            else None,
             music_video_thumbnail_url=thumbnail_tag["src"] if thumbnail_tag else None,
         )
 
-    def _parse_files(self, article) -> Optional[FileResult]:
+    def _parse_files(self, article) -> FileResult | None:
         url_tag = article.select_one("a.url_header")
         title_tag = article.select_one("h3 a")
         if not url_tag or not title_tag:
@@ -479,14 +511,17 @@ class SearXNG:
             category="files",
             url=url_tag["href"],
             title=title_tag.get_text(strip=True),
-            description=description_tag.get_text(strip=True) if description_tag else None,
+            description=description_tag.get_text(strip=True)
+            if description_tag
+            else None,
             file_url=url_tag["href"],
             file_thumbnail_url=thumbnail_tag["src"] if thumbnail_tag else None,
-            timestamp=time_tag.get("datetime") or time_tag.get_text(strip=True) \
-                if time_tag else None,
+            timestamp=time_tag.get("datetime") or time_tag.get_text(strip=True)
+            if time_tag
+            else None,
         )
 
-    def _parse_social_media(self, article) -> Optional[SocialMediaResult]:
+    def _parse_social_media(self, article) -> SocialMediaResult | None:
         url_tag = article.select_one("a.url_header")
         title_tag = article.select_one("h3") or article.select_one("h3 a")
         if not url_tag or not title_tag:
@@ -500,10 +535,13 @@ class SearXNG:
             category="social-media",
             url=url_tag["href"],
             title=title_tag.get_text(strip=True),
-            description=description_tag.get_text(strip=True) if description_tag else None,
+            description=description_tag.get_text(strip=True)
+            if description_tag
+            else None,
             thumbnail_url=thumbnail_tag["src"] if thumbnail_tag else None,
-            timestamp=time_tag.get("datetime") or time_tag.get_text(strip=True) \
-                if time_tag else None,
+            timestamp=time_tag.get("datetime") or time_tag.get_text(strip=True)
+            if time_tag
+            else None,
         )
 
     def _get_search_results_from_html(self, html: str) -> list:
@@ -538,7 +576,9 @@ class SearXNG:
         return results
 
     @log_errors(_logger)
-    async def search(self, search_configuration: SearXNGSearchConfiguration) -> SearXNGResponse:
+    async def search(
+        self, search_configuration: SearXNGSearchConfiguration
+    ) -> SearXNGResponse:
         """
         Performs a search on the SearXNG instance using the provided
         configuration and returns a structured response.
@@ -547,7 +587,7 @@ class SearXNG:
         search_url = self._build_search_url(search_configuration)
         _logger.debug("Search URL: %s", search_url)
 
-        headers: Optional[dict[str, str]] = None
+        headers: dict[str, str] | None = None
         if self.base_configuration.user_agent:
             headers = {"User-Agent": self.base_configuration.user_agent}
             if search_configuration.custom_headers:
