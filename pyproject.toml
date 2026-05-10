@@ -29,6 +29,9 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+  "integration: marks tests as integration tests requiring a live SearXNG instance (deselect with '-m \"not integration\"')",
+]
 
 [tool.ruff]
 line-length = 88
