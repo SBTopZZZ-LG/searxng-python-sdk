@@ -116,10 +116,10 @@ def test_dispatcher_routes_result_map_to_parse_map(searxng_client: SearXNG):
 
 
 def test_dispatcher_routes_result_it_to_parse_it(searxng_client: SearXNG):
-    """Test that article.result.result-it dispatches to _parse_it."""
+    """Test that article.category-it dispatches to _parse_it."""
     html = """
         <html><body>
-            <article class="result result-it">
+            <article class="result result-default category-it">
                 <a class="url_header" href="https://github.com/repo">url</a>
                 <h3><a href="https://github.com/repo">Some Repo</a></h3>
             </article>
@@ -132,10 +132,10 @@ def test_dispatcher_routes_result_it_to_parse_it(searxng_client: SearXNG):
 
 
 def test_dispatcher_routes_result_science_to_parse_science(searxng_client: SearXNG):
-    """Test that article.result.result-science dispatches to _parse_science."""
+    """Test that article.category-science dispatches to _parse_science."""
     html = """
         <html><body>
-            <article class="result result-science">
+            <article class="result result-default category-science">
                 <a href="https://example.com/paper">link</a>
                 <h3>Research Paper</h3>
             </article>
@@ -148,10 +148,10 @@ def test_dispatcher_routes_result_science_to_parse_science(searxng_client: SearX
 
 
 def test_dispatcher_routes_result_music_to_parse_music(searxng_client: SearXNG):
-    """Test that article.result.result-music dispatches to _parse_music."""
+    """Test that article.category-music dispatches to _parse_music."""
     html = """
         <html><body>
-            <article class="result result-music">
+            <article class="result result-default category-music">
                 <a class="url_header" href="https://example.com/song">url</a>
                 <h3><a href="https://example.com/song">Great Song</a></h3>
             </article>
@@ -164,10 +164,10 @@ def test_dispatcher_routes_result_music_to_parse_music(searxng_client: SearXNG):
 
 
 def test_dispatcher_routes_result_files_to_parse_files(searxng_client: SearXNG):
-    """Test that article.result.result-files dispatches to _parse_files."""
+    """Test that article.category-files dispatches to _parse_files."""
     html = """
         <html><body>
-            <article class="result result-files">
+            <article class="result result-torrent category-files">
                 <a class="url_header" href="https://example.com/file.pdf">url</a>
                 <h3><a href="https://example.com/file.pdf">My Document</a></h3>
             </article>
@@ -227,7 +227,7 @@ def test_dispatcher_returns_multiple_results_in_order(searxng_client: SearXNG):
                 <a href="https://example.com/img.jpg">link</a>
                 <span class="title">A Photo</span>
             </article>
-            <article class="result result-it">
+            <article class="result result-default category-it">
                 <a class="url_header" href="https://github.com/repo">url</a>
                 <h3><a href="https://github.com/repo">Some Repo</a></h3>
             </article>
@@ -251,7 +251,7 @@ def test_dispatcher_mixed_valid_and_invalid_articles(searxng_client: SearXNG):
             </article>
             <article class="result result-images">
             </article>
-            <article class="result result-it">
+            <article class="result result-default category-it">
                 <a class="url_header" href="https://github.com/repo">url</a>
                 <h3><a href="https://github.com/repo">Some Repo</a></h3>
             </article>

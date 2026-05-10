@@ -28,7 +28,7 @@ class Category(StrEnum):
     SCIENCE = "science"
     MUSIC = "music"
     FILES = "files"
-    SOCIAL_MEDIA = "social-media"
+    SOCIAL_MEDIA = "social media"
 
 
 class TimeRange(StrEnum):
@@ -557,13 +557,13 @@ class SearXNG:
                 result = self._parse_videos(article)
             elif "result-map" in classes:
                 result = self._parse_map(article)
-            elif "result-it" in classes:
+            elif "category-it" in classes:
                 result = self._parse_it(article)
-            elif "result-science" in classes:
+            elif "category-science" in classes:
                 result = self._parse_science(article)
-            elif "result-music" in classes:
+            elif "category-music" in classes:
                 result = self._parse_music(article)
-            elif "result-files" in classes:
+            elif "category-files" in classes:
                 result = self._parse_files(article)
             elif "category-social" in classes and "media" in classes:
                 result = self._parse_social_media(article)

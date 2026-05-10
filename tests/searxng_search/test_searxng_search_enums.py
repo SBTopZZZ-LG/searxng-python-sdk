@@ -35,7 +35,7 @@ def test_searxng_response_format_is_html():
         (Category.SCIENCE, "science"),
         (Category.MUSIC, "music"),
         (Category.FILES, "files"),
-        (Category.SOCIAL_MEDIA, "social-media"),
+        (Category.SOCIAL_MEDIA, "social media"),
     ],
 )
 def test_category_string_values(member: Category, expected: str):
