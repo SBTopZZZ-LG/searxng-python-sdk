@@ -42,3 +42,6 @@ ignore = ["E501"]
 quote-style = "double"
 indent-style = "space"
 docstring-code-format = true
+
+[tool.pylint.messages_control]
+disable = ["redefined-outer-name"]
