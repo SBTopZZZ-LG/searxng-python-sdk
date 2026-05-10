@@ -398,11 +398,11 @@ class SearXNG:
         thumbnail_tag = article.select_one("img.thumbnail")
         length_tag = article.select_one("span.thumbnail_length")
         author_tag = article.select_one("div.highlight")
-        description_tags = article.select("> p")
+        child_p_tags = [
+            tag for tag in article.children if getattr(tag, "name", None) == "p"
+        ]
         description = (
-            description_tags[1].get_text(strip=True)
-            if len(description_tags) > 1
-            else None
+            child_p_tags[1].get_text(strip=True) if len(child_p_tags) > 1 else None
         )
 
         return VideoResult(
