@@ -523,7 +523,7 @@ class SearXNG:
 
     def _parse_social_media(self, article) -> SocialMediaResult | None:
         url_tag = article.select_one("a.url_header")
-        title_tag = article.select_one("h3") or article.select_one("h3 a")
+        title_tag = article.select_one("h3 a") or article.select_one("h3")
         if not url_tag or not title_tag:
             return None
 
