@@ -595,7 +595,8 @@ class SearXNG:
         elif search_configuration.custom_headers is not None:
             headers = search_configuration.custom_headers
 
-        async with httpx.AsyncClient() as client:
+        # TODO: Make timeout configurable via SearXNGBaseConfiguration/SearXNGSearchConfiguration
+        async with httpx.AsyncClient(timeout=30.0) as client:
             try:
                 response = await client.get(
                     search_url,
