@@ -44,4 +44,4 @@ indent-style = "space"
 docstring-code-format = true
 
 [tool.pylint.messages_control]
-disable = ["redefined-outer-name"]
+disable = ["redefined-outer-name", "line-too-long"]
