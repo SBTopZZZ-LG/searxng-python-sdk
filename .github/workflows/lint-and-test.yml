@@ -54,7 +54,7 @@ jobs:
     needs: [lint, format]
     services:
       searxng:
-        image: searxng/searxng:latest
+        image: searxng/searxng:2026.5.10-df1f24fb7
         ports:
           - 8080:8080
     steps:
@@ -73,20 +73,62 @@ jobs:
         run: timeout 60 bash -c 'until curl -sf http://localhost:8080; do sleep 2; done'
 
       - name: Run tests with coverage
+        id: pytest
         env:
           SEARXNG_BASE_URL: http://localhost:8080
-        run: pytest tests/ --cov=searxng_search --cov-report=xml --cov-report=term-missing
-
-      - name: Generate coverage report
         run: |
-          echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
-          coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
-          echo "## Coverage Report" > coverage-report.md
-          coverage report --format=markdown >> coverage-report.md
+          set +e
+          pytest tests/ --cov=searxng_search --cov-report=xml --cov-report=term-missing 2>&1 | tee pytest-output.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+          exit ${PIPESTATUS[0]}
 
-      - name: Post coverage comment on PR
-        if: github.event_name == 'pull_request'
+      - name: Build report
+        if: always()
+        run: |
+          EXIT_CODE="${{ steps.pytest.outputs.exit_code }}"
+          if [ "$EXIT_CODE" = "0" ]; then
+            STATUS="✅ Tests passed"
+          else
+            STATUS="❌ Tests failed (exit code $EXIT_CODE)"
+          fi
+
+          # Job Summary
+          {
+            echo "## Test Results"
+            echo "$STATUS"
+            echo ""
+            echo "<details><summary>pytest output</summary>"
+            echo ""
+            echo '```'
+            cat pytest-output.txt
+            echo '```'
+            echo ""
+            echo "</details>"
+            echo ""
+            echo "## Coverage Report"
+            coverage report --format=markdown 2>/dev/null || echo "_Coverage data unavailable._"
+          } >> $GITHUB_STEP_SUMMARY
+
+          # PR comment file
+          {
+            echo "## Test Results"
+            echo "$STATUS"
+            echo ""
+            echo "<details><summary>pytest output</summary>"
+            echo ""
+            echo '```'
+            cat pytest-output.txt
+            echo '```'
+            echo ""
+            echo "</details>"
+            echo ""
+            echo "## Coverage Report"
+            coverage report --format=markdown 2>/dev/null || echo "_Coverage data unavailable._"
+          } > pr-comment.md
+
+      - name: Post comment on PR
+        if: always() && github.event_name == 'pull_request'
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           recreate: true
-          path: coverage-report.md
+          path: pr-comment.md
