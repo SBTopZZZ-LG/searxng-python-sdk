@@ -280,7 +280,7 @@ class SearXNG:
         return ",".join(quote(str(item), safe="") for item in items)
 
     def _urlencode_custom_params(self, custom_params: dict[str, str]) -> str:
-        if custom_params is None:
+        if custom_params is None or len(custom_params) == 0:
             return ""
         return "&".join(
             f"{quote(param_name, safe='')}={quote(param_value, safe='')}"
