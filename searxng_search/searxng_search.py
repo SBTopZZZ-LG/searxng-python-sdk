@@ -275,7 +275,7 @@ class SearXNG:
         self.base_configuration = base_configuration
 
     def _urlencode_set(self, items: set) -> str:
-        if items is None:
+        if items is None or len(items) == 0:
             return ""
         return ",".join(quote(str(item), safe="") for item in items)
 
