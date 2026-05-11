@@ -207,8 +207,18 @@ jobs:
         env:
           SEARXNG_BASE_URL: http://localhost:8080
         run: |
+          VERSION="${{ matrix.python-version }}"
+          COVERAGE_VERSION="${{ inputs.coverage-python-version }}"
+
           set +e
-          pytest tests/ --cov=searxng_search --cov-report=xml --cov-report=term-missing 2>&1 | tee pytest-output.txt
+          if [ "$VERSION" = "$COVERAGE_VERSION" ]; then
+            pytest tests/ --cov=searxng_search --cov-report=xml --cov-report=term-missing 2>&1 | tee pytest-output.txt
+            echo "coverage_captured=true" >> "$GITHUB_OUTPUT"
+          else
+            pytest tests/ 2>&1 | tee pytest-output.txt
+            echo "coverage_captured=false" >> "$GITHUB_OUTPUT"
+          fi
+
           echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
           exit ${PIPESTATUS[0]}
 
@@ -217,6 +227,7 @@ jobs:
         run: |
           VERSION="${{ matrix.python-version }}"
           EXIT_CODE="${{ steps.pytest.outputs.exit_code }}"
+          COVERAGE_CAPTURED="${{ steps.pytest.outputs.coverage_captured }}"
           if [ "$EXIT_CODE" = "0" ]; then
             STATUS="✅ Tests passed"
           else
@@ -235,9 +246,12 @@ jobs:
             echo '```'
             echo ""
             echo "</details>"
-            echo ""
-            echo "## Coverage Report"
-            coverage report --format=markdown 2>/dev/null || echo "_Coverage data unavailable._"
+
+            if [ "$COVERAGE_CAPTURED" = "true" ]; then
+              echo ""
+              echo "## Coverage Report"
+              coverage report --format=markdown 2>/dev/null || echo "_Coverage data unavailable._"
+            fi
           } > "report-${VERSION}.md"
 
           # Short per-job summary for visibility while matrix is running.
