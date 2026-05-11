@@ -60,10 +60,14 @@ jobs:
     name: CI Pass
     runs-on: ubuntu-latest
     if: always()
-    needs: [ci]
+    needs: [check-changes, ci]
     steps:
       - name: Check CI result
         run: |
+          if [[ "${{ needs.check-changes.result }}" != "success" ]]; then
+            echo "check-changes failed with result: ${{ needs.check-changes.result }}"
+            exit 1
+          fi
           if [[ "${{ needs.ci.result }}" == "success" || "${{ needs.ci.result }}" == "skipped" ]]; then
             echo "CI passed or was skipped (no relevant changes)"
             exit 0
