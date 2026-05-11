@@ -134,7 +134,11 @@ jobs:
             echo "<details><summary>ruff check output</summary>"
             echo ""
             echo '```'
-            cat lint-output.txt
+            if [ -f lint-output.txt ]; then
+              cat lint-output.txt
+            else
+              echo "ruff output not available (step may not have run)."
+            fi
             echo '```'
             echo ""
             echo "</details>"
@@ -142,7 +146,11 @@ jobs:
             echo "<details><summary>ruff format --check output</summary>"
             echo ""
             echo '```'
-            cat format-output.txt
+            if [ -f format-output.txt ]; then
+              cat format-output.txt
+            else
+              echo "ruff format output not available (step may not have run)."
+            fi
             echo '```'
             echo ""
             echo "</details>"
