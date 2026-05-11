@@ -93,6 +93,21 @@ def test_base_configuration_rejects_non_positive_timeout(timeout: float):
         )
 
 
+def test_base_configuration_handle_rate_limiting_defaults_to_true():
+    """Test that handle_rate_limiting defaults to True when not provided."""
+    config = SearXNGBaseConfiguration(base_url="https://searxng.example.com")
+    assert config.handle_rate_limiting is True
+
+
+def test_base_configuration_accepts_handle_rate_limiting_false():
+    """Test that handle_rate_limiting can be explicitly set to False."""
+    config = SearXNGBaseConfiguration(
+        base_url="https://searxng.example.com",
+        handle_rate_limiting=False,
+    )
+    assert config.handle_rate_limiting is False
+
+
 # ---------------------------------------------------------------------------
 # SearXNGSearchConfiguration
 # ---------------------------------------------------------------------------

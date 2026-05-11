@@ -210,10 +210,10 @@ def _patch_async_client(mock_get: AsyncMock):
 async def test_search_passes_default_timeout_to_async_client(searxng_client: SearXNG):
     """Test that search() creates AsyncClient with the default 30.0s timeout."""
     mock_get = AsyncMock(return_value=_make_mock_response())
-    with _patch_async_client(mock_get) as MockClient:
+    with _patch_async_client(mock_get) as mock_client:
         await searxng_client.search(SearXNGSearchConfiguration(query="python"))
 
-    MockClient.assert_called_once_with(timeout=30.0)
+    mock_client.assert_called_once_with(timeout=30.0)
 
 
 async def test_search_passes_custom_timeout_to_async_client():
@@ -225,10 +225,10 @@ async def test_search_passes_custom_timeout_to_async_client():
         )
     )
     mock_get = AsyncMock(return_value=_make_mock_response())
-    with _patch_async_client(mock_get) as MockClient:
+    with _patch_async_client(mock_get) as mock_client:
         await client.search(SearXNGSearchConfiguration(query="python"))
 
-    MockClient.assert_called_once_with(timeout=5.0)
+    mock_client.assert_called_once_with(timeout=5.0)
 
 
 async def test_search_passes_none_timeout_to_async_client():
@@ -240,7 +240,93 @@ async def test_search_passes_none_timeout_to_async_client():
         )
     )
     mock_get = AsyncMock(return_value=_make_mock_response())
-    with _patch_async_client(mock_get) as MockClient:
+    with _patch_async_client(mock_get) as mock_client:
         await client.search(SearXNGSearchConfiguration(query="python"))
 
-    MockClient.assert_called_once_with(timeout=None)
+    mock_client.assert_called_once_with(timeout=None)
+
+
+# ---------------------------------------------------------------------------
+# Rate limiting (HTTP 429)
+# ---------------------------------------------------------------------------
+
+
+def _make_429_response() -> MagicMock:
+    """Return a mock httpx.Response with status 429 that raises HTTPStatusError."""
+    request_mock = MagicMock()
+    mock = MagicMock(spec=httpx.Response)
+    mock.status_code = 429
+    mock.text = "Too Many Requests"
+    mock.headers = httpx.Headers({"content-type": "text/html"})
+    mock.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "429", request=request_mock, response=mock
+    )
+    return mock
+
+
+async def test_search_raises_immediately_on_429_when_handle_rate_limiting_disabled():
+    """Test that a 429 raises immediately without retrying when handle_rate_limiting=False."""
+    client = SearXNG(
+        base_configuration=SearXNGBaseConfiguration(
+            base_url="https://searxng.example.com",
+            handle_rate_limiting=False,
+        )
+    )
+    mock_get = AsyncMock(return_value=_make_429_response())
+    with _patch_async_client(mock_get):
+        with pytest.raises(httpx.HTTPStatusError) as exc_info:
+            await client.search(SearXNGSearchConfiguration(query="python"))
+
+    assert "429" in str(exc_info.value)
+    assert mock_get.call_count == 1
+
+
+async def test_search_retries_on_429_and_raises_after_all_retries_exhausted(
+    searxng_client: SearXNG,
+):
+    """Test that search() performs 3 retries on 429 then raises HTTPStatusError."""
+    mock_get = AsyncMock(return_value=_make_429_response())
+    mock_sleep = AsyncMock()
+    with _patch_async_client(mock_get):
+        with patch("searxng_search.searxng_search.asyncio.sleep", new=mock_sleep):
+            with pytest.raises(httpx.HTTPStatusError) as exc_info:
+                await searxng_client.search(SearXNGSearchConfiguration(query="python"))
+
+    assert "429" in str(exc_info.value)
+    assert mock_get.call_count == 4  # 1 initial + 3 retries
+    assert mock_sleep.call_count == 3  # slept before each retry
+
+
+async def test_search_retries_on_429_and_succeeds_on_later_attempt(
+    searxng_client: SearXNG,
+):
+    """Test that search() retries on 429 and returns a result on a subsequent success."""
+    mock_get = AsyncMock(side_effect=[_make_429_response(), _make_mock_response()])
+    with _patch_async_client(mock_get):
+        with patch("searxng_search.searxng_search.asyncio.sleep", new=AsyncMock()):
+            result = await searxng_client.search(
+                SearXNGSearchConfiguration(query="python")
+            )
+
+    assert isinstance(result, SearXNGResponse)
+    assert mock_get.call_count == 2
+
+
+async def test_search_uses_correct_base_delays_on_429_retries(
+    searxng_client: SearXNG,
+):
+    """Test that retry delays use base values of 10s, 15s, 20s (jitter zeroed out)."""
+    mock_get = AsyncMock(return_value=_make_429_response())
+    mock_sleep = AsyncMock()
+    with _patch_async_client(mock_get):
+        with patch("searxng_search.searxng_search.asyncio.sleep", new=mock_sleep):
+            with patch(
+                "searxng_search.searxng_search.random.uniform", return_value=0.0
+            ):
+                with pytest.raises(httpx.HTTPStatusError):
+                    await searxng_client.search(
+                        SearXNGSearchConfiguration(query="python")
+                    )
+
+    sleep_delays = [call.args[0] for call in mock_sleep.call_args_list]
+    assert sleep_delays == [10.0, 15.0, 20.0]

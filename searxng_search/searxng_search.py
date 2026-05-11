@@ -1,5 +1,7 @@
 """SearXNG Search Module Implementation."""
 
+import asyncio
+import random
 from enum import StrEnum
 from urllib.parse import quote
 
@@ -87,6 +89,20 @@ class SearXNGBaseConfiguration:
         base_url: The base URL of the SearXNG instance.
         user_agent: Optional custom User-Agent string to use for search requests.
         timeout: Optional timeout in seconds for search requests. Defaults to 30 seconds.
+        handle_rate_limiting: Whether to automatically handle rate limiting by retrying
+            after a delay when a 429 status code is received. Defaults to True.
+
+    Note:
+        When ``handle_rate_limiting`` is enabled, the request is automatically retried
+        on HTTP 429 using fixed delays with jitter.
+
+        Retry schedule (Fixed + Jitter strategy):
+
+        - Attempt 1: 10s base ± 2s jitter  →  effective range: [8s, 12s]
+        - Attempt 2: 15s base ± 2s jitter  →  effective range: [13s, 17s]
+        - Attempt 3: 20s base ± 2s jitter  →  effective range: [18s, 22s]
+
+        Raises after all retries are exhausted without a successful response.
     """
 
     base_url: _HttpUrl
@@ -95,6 +111,10 @@ class SearXNGBaseConfiguration:
         default=30.0,
         gt=0,
         description="Timeout in seconds for search requests. Must be greater than 0.",
+    )
+    handle_rate_limiting: bool = Field(
+        default=True,
+        description="Whether to automatically handle rate limiting by retrying after a delay when a 429 status code is received.",
     )
 
 
@@ -602,34 +622,52 @@ class SearXNG:
         elif search_configuration.custom_headers is not None:
             headers = search_configuration.custom_headers
 
+        _retry_schedule = [(10, 2), (15, 2), (20, 2)]  # (base_seconds, jitter_seconds)
+        _max_attempts = len(_retry_schedule) + 1  # initial + 3 retries
+
         async with httpx.AsyncClient(timeout=self.base_configuration.timeout) as client:
-            try:
-                response = await client.get(
-                    search_url,
-                    headers=headers,
-                )
-                response.raise_for_status()
-            except httpx.HTTPStatusError as e:
-                # TODO: Handle rate limiting (HTTP 429) and other specific status codes
+            for attempt in range(_max_attempts):
+                try:
+                    response = await client.get(
+                        search_url,
+                        headers=headers,
+                    )
+                    response.raise_for_status()
+                    break
+                except httpx.HTTPStatusError as e:
+                    if (
+                        e.response.status_code == 429
+                        and self.base_configuration.handle_rate_limiting
+                        and attempt < len(_retry_schedule)
+                    ):
+                        base, jitter = _retry_schedule[attempt]
+                        delay = base + random.uniform(-jitter, jitter)
+                        _logger.warning(
+                            "Rate limited (429). Retrying in %.1fs (attempt %d/%d).",
+                            delay,
+                            attempt + 1,
+                            len(_retry_schedule),
+                        )
+                        await asyncio.sleep(delay)
+                    else:
+                        raise httpx.HTTPStatusError(
+                            f"Search request failed with status {e.response.status_code}: {e.response.text}",
+                            request=e.request,
+                            response=e.response,
+                        ) from e
+                except httpx.RequestError as e:
+                    raise httpx.RequestError(
+                        f"Search request failed: {e}",
+                        request=e.request,
+                    ) from e
 
-                raise httpx.HTTPStatusError(
-                    f"Search request failed with status {e.response.status_code}: {e.response.text}",
-                    request=e.request,
-                    response=e.response,
-                ) from e
-            except httpx.RequestError as e:
-                raise httpx.RequestError(
-                    f"Search request failed: {e}",
-                    request=e.request,
-                ) from e
-
-        response_html = response.text
+        response_html = response.text  # type: ignore
         search_results = self._get_search_results_from_html(response_html)
 
         return SearXNGResponse(
             search_url=search_url,
-            status_code=response.status_code,
-            response_headers=dict(response.headers),
+            status_code=response.status_code,  # type: ignore
+            response_headers=dict(response.headers),  # type: ignore
             full_html=response_html,
             search_results=search_results,
         )
