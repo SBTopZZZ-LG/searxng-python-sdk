@@ -10,10 +10,63 @@ permissions:
   contents: read
   pull-requests: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
+  check-changes:
+    name: Check Changed Files
+    runs-on: ubuntu-latest
+    outputs:
+      core_changed: ${{ steps.filter.outputs.core }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            core:
+              - 'pyproject.toml'
+              - 'searxng_search/**'
+              - 'tests/**'
+              - '.github/workflows/**'
+
+  notify-skipped:
+    name: Notify Skipped
+    runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.core_changed == 'false' && github.event_name == 'pull_request'
+    steps:
+      - uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          message: |
+            > [!NOTE]
+            > No changes detected in core files (`searxng_search/`, `tests/`, `pyproject.toml`, `.github/workflows/`). Lint & Test workflow was skipped.
+
   ci:
     name: CI
+    needs: check-changes
+    if: needs.check-changes.outputs.core_changed == 'true'
     uses: ./.github/workflows/lint-and-test.yml
     with:
       python-version: "3.11"
       searxng-image: "searxng/searxng:2026.5.10-df1f24fb7"
+
+  pass:
+    name: CI Pass
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [ci]
+    steps:
+      - name: Check CI result
+        run: |
+          if [[ "${{ needs.ci.result }}" == "success" || "${{ needs.ci.result }}" == "skipped" ]]; then
+            echo "CI passed or was skipped (no relevant changes)"
+            exit 0
+          fi
+          echo "CI failed with result: ${{ needs.ci.result }}"
+          exit 1
