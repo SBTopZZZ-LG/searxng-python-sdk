@@ -665,7 +665,7 @@ class SearXNG:
 
         if response is None:
             raise RuntimeError(
-                f"Search request failed without a valid response after {_max_attempts} attempts."
+                f"Search request failed without a valid response after {_max_attempts} maximum configured attempts."
             )
 
         response_html = response.text
