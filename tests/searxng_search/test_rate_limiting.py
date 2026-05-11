@@ -91,6 +91,7 @@ def make_client_and_server():
 
     for s in servers:
         s.shutdown()
+        s.server_close()
 
 
 async def test_rate_limiting_retries_and_succeeds(make_client_and_server):
