@@ -1,5 +1,7 @@
 """Tests for the search() method on the SearXNG class."""
 
+from __future__ import annotations
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx

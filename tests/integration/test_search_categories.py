@@ -1,5 +1,7 @@
 """Integration tests: verify the parser correctly identifies result types per category."""
 
+from __future__ import annotations
+
 import os
 
 import httpx
@@ -134,7 +136,7 @@ async def test_music_results_parsed_correctly(searxng_client: SearXNG):
     # Music category may include video results (e.g. YouTube) alongside MusicResult
     assert any(isinstance(r, MusicResult) for r in response.search_results)
     assert all(
-        isinstance(r, MusicResult | VideoResult) for r in response.search_results
+        isinstance(r, (MusicResult, VideoResult)) for r in response.search_results
     )
 
 

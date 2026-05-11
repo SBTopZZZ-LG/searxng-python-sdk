@@ -1,8 +1,11 @@
 """SearXNG Search Module Implementation."""
 
+from __future__ import annotations
+
 import asyncio
 import random
-from enum import StrEnum
+from enum import Enum
+from typing import Union
 from urllib.parse import quote
 
 import httpx
@@ -18,7 +21,14 @@ SEARXNG_FORMAT = "html"
 _logger = get_logger(__name__)
 
 
-class Category(StrEnum):
+class _StringEnum(str, Enum):
+    """Cross-version replacement for StrEnum that preserves value stringification."""
+
+    def __str__(self) -> str:
+        return self.value
+
+
+class Category(_StringEnum):
     """Enum representing search result categories in SearXNG."""
 
     GENERAL = "general"
@@ -33,7 +43,7 @@ class Category(StrEnum):
     SOCIAL_MEDIA = "social media"
 
 
-class TimeRange(StrEnum):
+class TimeRange(_StringEnum):
     """Enum representing time range filters for search results."""
 
     DAY = "day"
@@ -41,7 +51,7 @@ class TimeRange(StrEnum):
     YEAR = "year"
 
 
-class Autocomplete(StrEnum):
+class Autocomplete(_StringEnum):
     """Enum representing autocomplete providers for search queries."""
 
     GOOGLE = "google"
@@ -54,7 +64,7 @@ class Autocomplete(StrEnum):
     QWANT = "qwant"
 
 
-class SafeSearch(StrEnum):
+class SafeSearch(_StringEnum):
     """Enum representing safe search levels for filtering search results."""
 
     OFF = "0"
@@ -62,13 +72,13 @@ class SafeSearch(StrEnum):
     STRICT = "2"
 
 
-class Theme(StrEnum):
+class Theme(_StringEnum):
     """Enum representing UI themes for the SearXNG interface."""
 
     SIMPLE = "simple"
 
 
-class Plugins(StrEnum):
+class Plugins(_StringEnum):
     """Enum representing plugins that can be enabled or disabled in a SearXNG instance."""
 
     HASH_PLUGIN = "Hash_plugin"
@@ -226,17 +236,17 @@ class SocialMediaResult:
     timestamp: str | None = None
 
 
-_SearxngSearchResult = (
-    GeneralOrNewsResult
-    | ImageResult
-    | VideoResult
-    | MapResult
-    | ITResult
-    | ScienceResult
-    | MusicResult
-    | FileResult
-    | SocialMediaResult
-)
+_SearxngSearchResult = Union[
+    GeneralOrNewsResult,
+    ImageResult,
+    VideoResult,
+    MapResult,
+    ITResult,
+    ScienceResult,
+    MusicResult,
+    FileResult,
+    SocialMediaResult,
+]
 
 
 @dataclass

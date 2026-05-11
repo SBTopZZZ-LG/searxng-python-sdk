@@ -1,5 +1,7 @@
 """Tests for SearXNGBaseConfiguration and SearXNGSearchConfiguration dataclasses."""
 
+from __future__ import annotations
+
 import math
 
 import pytest
