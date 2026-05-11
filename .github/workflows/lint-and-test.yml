@@ -12,7 +12,7 @@ on:
         type: string
         default: "searxng/searxng:2026.5.10-df1f24fb7"
     secrets:
-      codecov-token:
+      codecov_token:
         required: false
 
 env:
@@ -128,7 +128,7 @@ jobs:
       - name: Upload coverage to Codecov
         if: always() && env.CODECOV_TOKEN != '' && github.event.pull_request.head.repo.fork == false
         env:
-          CODECOV_TOKEN: ${{ secrets.codecov-token }}
+          CODECOV_TOKEN: ${{ secrets.codecov_token }}
         uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.codecov-token }}
+          token: ${{ secrets.codecov_token }}
