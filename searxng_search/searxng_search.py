@@ -625,6 +625,8 @@ class SearXNG:
         _retry_schedule = [(10, 2), (15, 2), (20, 2)]  # (base_seconds, jitter_seconds)
         _max_attempts = len(_retry_schedule) + 1  # initial + 3 retries
 
+        response: httpx.Response | None = None
+
         async with httpx.AsyncClient(timeout=self.base_configuration.timeout) as client:
             for attempt in range(_max_attempts):
                 try:
@@ -661,13 +663,16 @@ class SearXNG:
                         request=e.request,
                     ) from e
 
-        response_html = response.text  # type: ignore
+        if response is None:
+            raise RuntimeError("Search request failed without a valid response.")
+
+        response_html = response.text
         search_results = self._get_search_results_from_html(response_html)
 
         return SearXNGResponse(
             search_url=search_url,
-            status_code=response.status_code,  # type: ignore
-            response_headers=dict(response.headers),  # type: ignore
+            status_code=response.status_code,
+            response_headers=dict(response.headers),
             full_html=response_html,
             search_results=search_results,
         )
