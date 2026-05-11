@@ -664,7 +664,9 @@ class SearXNG:
                     ) from e
 
         if response is None:
-            raise RuntimeError("Search request failed without a valid response.")
+            raise RuntimeError(
+                f"Search request failed without a valid response after {_max_attempts} attempts."
+            )
 
         response_html = response.text
         search_results = self._get_search_results_from_html(response_html)
