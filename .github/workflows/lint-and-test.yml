@@ -356,7 +356,7 @@ jobs:
         run: cat combined-report.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Post comment on PR
-        if: inputs.post-pr-comment && inputs.pr-number != ''
+        if: inputs.post-pr-comment && inputs.pr-number != '' && inputs.is-fork-pr == false
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           recreate: true
