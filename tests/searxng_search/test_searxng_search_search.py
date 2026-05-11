@@ -1,5 +1,8 @@
 """Tests for the search() method on the SearXNG class."""
 
+from __future__ import annotations
+
+from typing import Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -28,7 +31,7 @@ _ARTICLE_HTML = """
 def _make_mock_response(
     status_code: int = 200,
     text: str = _MINIMAL_HTML,
-    headers: dict | None = None,
+    headers: Optional[dict] = None,
 ) -> MagicMock:
     """Return a mock httpx.Response."""
     mock = MagicMock(spec=httpx.Response)

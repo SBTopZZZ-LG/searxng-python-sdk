@@ -1,6 +1,9 @@
 """Tests for SearXNGBaseConfiguration and SearXNGSearchConfiguration dataclasses."""
 
+from __future__ import annotations
+
 import math
+from typing import Union
 
 import pytest
 from pydantic import ValidationError
@@ -150,17 +153,17 @@ def test_search_configuration_stores_all_fields():
     query = "python"
     custom_params = {"lang": "en"}
     custom_headers = {"X-Custom": "value"}
-    categories: set[Category | str] = {Category.GENERAL, Category.NEWS}
+    categories: set[Union[Category, str]] = {Category.GENERAL, Category.NEWS}
     engines = {"google", "bing"}
     page_number = 2
     time_range = TimeRange.MONTH
     results_on_new_tab = True
     image_proxy = False
-    autocomplete: set[Autocomplete | str] = {Autocomplete.GOOGLE}
+    autocomplete: set[Union[Autocomplete, str]] = {Autocomplete.GOOGLE}
     safe_search = SafeSearch.MODERATE
-    theme: set[Theme | str] = {Theme.SIMPLE}
-    enabled_plugins: set[Plugins | str] = {Plugins.HASH_PLUGIN}
-    disabled_plugins: set[Plugins | str] = {Plugins.TOR_CHECK_PLUGIN}
+    theme: set[Union[Theme, str]] = {Theme.SIMPLE}
+    enabled_plugins: set[Union[Plugins, str]] = {Plugins.HASH_PLUGIN}
+    disabled_plugins: set[Union[Plugins, str]] = {Plugins.TOR_CHECK_PLUGIN}
     enabled_engines = {"brave"}
     disabled_engines = {"yahoo"}
 

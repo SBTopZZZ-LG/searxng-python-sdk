@@ -53,8 +53,17 @@ jobs:
     if: needs.check-changes.outputs.core_changed == 'true'
     uses: ./.github/workflows/lint-and-test.yml
     with:
-      python-version: "3.11"
+      python-versions: |
+        3.9
+        3.10
+        3.11
+        3.12
+      coverage-python-version: "3.9"
       searxng-image: "searxng/searxng:2026.5.10-df1f24fb7"
+      post-pr-comment: true
+      pr-number: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
+      is-fork-pr: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork || false }}
+      upload-coverage: true
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
 
