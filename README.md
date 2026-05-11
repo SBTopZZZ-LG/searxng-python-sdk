@@ -76,6 +76,7 @@ asyncio.run(main())
 | `autocomplete` | `set[Autocomplete \| str] \| None` | Autocomplete providers |
 | `image_proxy` | `bool \| None` | Enable image proxying |
 | `results_on_new_tab` | `bool \| None` | Open results in a new tab |
+| `theme` | `set[Theme \| str] \| None` | UI theme to use (`simple`, `oscar`, `auto`) |
 | `enabled_plugins` / `disabled_plugins` | `set[Plugins \| str] \| None` | Plugins to enable/disable |
 | `enabled_engines` / `disabled_engines` | `set[str] \| None` | Engines to enable/disable |
 | `custom_params` | `dict[str, str] \| None` | Extra query parameters appended to the URL |
