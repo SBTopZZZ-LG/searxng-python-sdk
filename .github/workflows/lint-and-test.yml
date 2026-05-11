@@ -6,6 +6,18 @@ on:
       python-version:
         required: false
         type: string
+        default: ""
+      python-versions:
+        required: false
+        type: string
+        default: |
+          3.9
+          3.10
+          3.11
+          3.12
+      coverage-python-version:
+        required: false
+        type: string
         default: "3.9"
       searxng-image:
         required: false
@@ -35,9 +47,48 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  lint-and-format:
-    name: Lint & Format
+  prepare-python-matrix:
+    name: Prepare Python Matrix
     runs-on: ubuntu-latest
+    outputs:
+      versions-json: ${{ steps.parse.outputs.versions-json }}
+    steps:
+      - name: Parse Python versions
+        id: parse
+        env:
+          PYTHON_VERSIONS_INPUT: ${{ inputs.python-versions }}
+          PYTHON_VERSION_FALLBACK: ${{ inputs.python-version }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+
+          raw = os.environ.get("PYTHON_VERSIONS_INPUT", "").strip()
+          fallback = os.environ.get("PYTHON_VERSION_FALLBACK", "").strip()
+
+          if not raw and fallback:
+            raw = fallback
+
+          normalized = raw.replace("\n", ",")
+          versions = [v.strip() for v in normalized.split(",") if v.strip()]
+
+          if not versions:
+            raise SystemExit("No Python versions were provided.")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+            fh.write(f"versions-json={json.dumps(versions)}\n")
+
+          print("Using Python versions:", ", ".join(versions))
+          PY
+
+  lint-and-format:
+    name: Lint & Format (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    needs: [prepare-python-matrix]
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ${{ fromJson(needs.prepare-python-matrix.outputs.versions-json) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,21 +96,84 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ inputs.python-version }}
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
 
       - name: Run linter
-        run: ruff check .
+        id: lint
+        continue-on-error: true
+        run: ruff check . 2>&1 | tee lint-output.txt
 
       - name: Check formatting
-        run: ruff format --check .
+        id: format
+        continue-on-error: true
+        run: ruff format --check . 2>&1 | tee format-output.txt
+
+      - name: Build lint and format report
+        if: always()
+        run: |
+          VERSION="${{ matrix.python-version }}"
+          LINT_OUTCOME="${{ steps.lint.outcome }}"
+          FORMAT_OUTCOME="${{ steps.format.outcome }}"
+
+          if [ "$LINT_OUTCOME" = "success" ] && [ "$FORMAT_OUTCOME" = "success" ]; then
+            STATUS="✅ Lint and format checks passed"
+          else
+            STATUS="❌ Lint and/or format checks failed"
+          fi
+
+          {
+            echo "## Python $VERSION"
+            echo "$STATUS"
+            echo ""
+            echo "- Lint outcome: $LINT_OUTCOME"
+            echo "- Format outcome: $FORMAT_OUTCOME"
+            echo ""
+            echo "<details><summary>ruff check output</summary>"
+            echo ""
+            echo '```'
+            cat lint-output.txt
+            echo '```'
+            echo ""
+            echo "</details>"
+            echo ""
+            echo "<details><summary>ruff format --check output</summary>"
+            echo ""
+            echo '```'
+            cat format-output.txt
+            echo '```'
+            echo ""
+            echo "</details>"
+          } > "lint-report-${VERSION}.md"
+
+          {
+            echo "## Python $VERSION"
+            echo "$STATUS"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload lint and format report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report-py${{ matrix.python-version }}
+          path: lint-report-${{ matrix.python-version }}.md
+          if-no-files-found: error
+
+      - name: Fail job when lint or format fails
+        if: always() && (steps.lint.outcome != 'success' || steps.format.outcome != 'success')
+        run: exit 1
 
   test:
-    name: Test
+    name: Test (py${{ matrix.python-version }})
     runs-on: ubuntu-latest
-    needs: [lint-and-format]
+    if: always()
+    needs: [prepare-python-matrix, lint-and-format]
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ${{ fromJson(needs.prepare-python-matrix.outputs.versions-json) }}
     services:
       searxng:
         image: ${{ inputs.searxng-image }}
@@ -72,7 +186,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ inputs.python-version }}
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
@@ -93,6 +207,7 @@ jobs:
       - name: Build report
         if: always()
         run: |
+          VERSION="${{ matrix.python-version }}"
           EXIT_CODE="${{ steps.pytest.outputs.exit_code }}"
           if [ "$EXIT_CODE" = "0" ]; then
             STATUS="✅ Tests passed"
@@ -100,9 +215,9 @@ jobs:
             STATUS="❌ Tests failed (exit code $EXIT_CODE)"
           fi
 
-          # Job Summary
+          # Per-version report file used by aggregation job.
           {
-            echo "## Test Results"
+            echo "## Python $VERSION"
             echo "$STATUS"
             echo ""
             echo "<details><summary>pytest output</summary>"
@@ -115,37 +230,127 @@ jobs:
             echo ""
             echo "## Coverage Report"
             coverage report --format=markdown 2>/dev/null || echo "_Coverage data unavailable._"
-          } >> $GITHUB_STEP_SUMMARY
+          } > "report-${VERSION}.md"
 
-          # PR comment file
+          # Short per-job summary for visibility while matrix is running.
           {
-            echo "## Test Results"
+            echo "## Python $VERSION"
             echo "$STATUS"
-            echo ""
-            echo "<details><summary>pytest output</summary>"
-            echo ""
-            echo '```'
-            cat pytest-output.txt
-            echo '```'
-            echo ""
-            echo "</details>"
-            echo ""
-            echo "## Coverage Report"
-            coverage report --format=markdown 2>/dev/null || echo "_Coverage data unavailable._"
-          } > pr-comment.md
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Post comment on PR
-        if: always() && inputs.post-pr-comment && inputs.pr-number != ''
-        uses: marocchino/sticky-pull-request-comment@v2
+      - name: Upload version report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          recreate: true
-          number: ${{ inputs.pr-number }}
-          path: pr-comment.md
+          name: test-report-py${{ matrix.python-version }}
+          path: report-${{ matrix.python-version }}.md
+          if-no-files-found: error
 
       - name: Upload coverage to Codecov
-        if: always() && inputs.upload-coverage && env.CODECOV_TOKEN != '' && inputs.is-fork-pr == false
+        if: always() && inputs.upload-coverage && env.CODECOV_TOKEN != '' && inputs.is-fork-pr == false && matrix.python-version == inputs.coverage-python-version
         env:
           CODECOV_TOKEN: ${{ secrets.codecov_token }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.codecov_token }}
+
+  report:
+    name: Aggregate Report
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [prepare-python-matrix, lint-and-format, test]
+    steps:
+      - name: Download lint report artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: lint-report-py*
+          merge-multiple: true
+          path: reports
+
+      - name: Download version report artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-report-py*
+          merge-multiple: true
+          path: reports
+
+      - name: Build combined report
+        env:
+          VERSIONS_JSON: ${{ needs.prepare-python-matrix.outputs.versions-json }}
+          LINT_RESULT: ${{ needs.lint-and-format.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          versions = json.loads(os.environ["VERSIONS_JSON"])
+          lint_result = os.environ.get("LINT_RESULT", "unknown")
+          result = os.environ.get("TEST_RESULT", "unknown")
+          lint_label = {
+              "success": "✅ Lint/format passed for all matrix jobs",
+              "failure": "❌ One or more lint/format matrix jobs failed",
+              "cancelled": "⚠️ Lint/format matrix jobs were cancelled",
+              "skipped": "⚠️ Lint/format matrix jobs were skipped",
+          }.get(lint_result, f"⚠️ Lint/format matrix status: {lint_result}")
+          result_label = {
+              "success": "✅ All matrix jobs passed",
+              "failure": "❌ One or more matrix jobs failed",
+              "cancelled": "⚠️ Matrix jobs were cancelled",
+              "skipped": "⚠️ Matrix jobs were skipped",
+          }.get(result, f"⚠️ Matrix jobs finished with status: {result}")
+
+          lines = [
+              "## Test Results (All Python Versions)",
+              lint_label,
+              result_label,
+              "",
+              "### Versions",
+              ", ".join(versions),
+              "",
+          ]
+
+          for version in versions:
+              lint_report_file = Path("reports") / f"lint-report-{version}.md"
+              report_file = Path("reports") / f"report-{version}.md"
+              if lint_report_file.exists():
+                  lines.append(lint_report_file.read_text(encoding="utf-8").rstrip())
+              else:
+                  lines.extend(
+                      [
+                          f"## Python {version}",
+                          "⚠️ Lint/format report artifact missing for this version.",
+                          "",
+                      ]
+                  )
+              lines.append("")
+
+              if report_file.exists():
+                  lines.append(report_file.read_text(encoding="utf-8").rstrip())
+              else:
+                  lines.extend(
+                      [
+                          f"## Python {version}",
+                      "⚠️ Test report artifact missing for this version.",
+                          "",
+                      ]
+                  )
+              lines.append("")
+
+          combined = "\n".join(lines).rstrip() + "\n"
+          Path("combined-report.md").write_text(combined, encoding="utf-8")
+          PY
+
+      - name: Publish job summary
+        run: cat combined-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post comment on PR
+        if: inputs.post-pr-comment && inputs.pr-number != ''
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          number: ${{ inputs.pr-number }}
+          path: combined-report.md
