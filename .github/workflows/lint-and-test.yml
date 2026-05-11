@@ -6,11 +6,19 @@ on:
       python-version:
         required: false
         type: string
-        default: "3.11"
+        default: "3.9"
       searxng-image:
         required: false
         type: string
         default: "searxng/searxng:2026.5.10-df1f24fb7"
+      post-pr-comment:
+        required: false
+        type: boolean
+        default: true
+      upload-coverage:
+        required: false
+        type: boolean
+        default: true
     secrets:
       codecov_token:
         required: false
@@ -119,14 +127,14 @@ jobs:
           } > pr-comment.md
 
       - name: Post comment on PR
-        if: always() && github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request' && inputs.post-pr-comment
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           recreate: true
           path: pr-comment.md
 
       - name: Upload coverage to Codecov
-        if: always() && env.CODECOV_TOKEN != '' && github.event.pull_request.head.repo.fork == false
+        if: always() && inputs.upload-coverage && env.CODECOV_TOKEN != '' && github.event.pull_request.head.repo.fork == false
         env:
           CODECOV_TOKEN: ${{ secrets.codecov_token }}
         uses: codecov/codecov-action@v5

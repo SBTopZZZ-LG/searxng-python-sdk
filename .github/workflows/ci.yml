@@ -48,13 +48,19 @@ jobs:
             > No changes detected in core files (`searxng_search/`, `tests/`, `pyproject.toml`, `.github/workflows/`). Lint & Test workflow was skipped.
 
   ci:
-    name: CI
+    name: CI (${{ matrix.python-version }})
     needs: check-changes
     if: needs.check-changes.outputs.core_changed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
     uses: ./.github/workflows/lint-and-test.yml
     with:
-      python-version: "3.11"
+      python-version: ${{ matrix.python-version }}
       searxng-image: "searxng/searxng:2026.5.10-df1f24fb7"
+      post-pr-comment: ${{ matrix.python-version == '3.9' }}
+      upload-coverage: ${{ matrix.python-version == '3.9' }}
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
 
