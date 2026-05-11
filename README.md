@@ -3,7 +3,7 @@
 [![CI](https://github.com/SBTopZZZ-LG/searxng-python-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/SBTopZZZ-LG/searxng-python-sdk/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/SBTopZZZ-LG/searxng-python-sdk/graph/badge.svg?token=K5EmyPXCmA)](https://codecov.io/gh/SBTopZZZ-LG/searxng-python-sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-%3E%3D3.11-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-%3E%3D3.9-blue)](https://www.python.org/)
 [![Latest Release](https://img.shields.io/github/v/tag/SBTopZZZ-LG/searxng-python-sdk?label=release)](https://github.com/SBTopZZZ-LG/searxng-python-sdk/tags)
 
 An unofficial Python SDK for interacting with [SearXNG](https://github.com/searxng/searxng) instances. Provides a simple async interface for querying any self-hosted SearXNG instance and receiving structured, typed search results.
