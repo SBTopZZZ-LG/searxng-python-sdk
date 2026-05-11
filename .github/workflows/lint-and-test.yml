@@ -13,7 +13,7 @@ on:
         default: "searxng/searxng:2026.5.10-df1f24fb7"
     secrets:
       codecov-token:
-        required: true
+        required: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -126,7 +126,9 @@ jobs:
           path: pr-comment.md
 
       - name: Upload coverage to Codecov
-        if: always()
+        if: always() && env.CODECOV_TOKEN != '' && github.event.pull_request.head.repo.fork == false
+        env:
+          CODECOV_TOKEN: ${{ secrets.codecov-token }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.codecov-token }}
