@@ -3,6 +3,7 @@
 .venv/.done: pyproject.toml
 	python3 -m venv .venv
 	.venv/bin/pip install -e ".[dev]"
+	.venv/bin/pre-commit install
 	touch .venv/.done
 
 setup: .venv/.done
