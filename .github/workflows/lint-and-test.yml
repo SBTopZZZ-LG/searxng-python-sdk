@@ -11,6 +11,9 @@ on:
         required: false
         type: string
         default: "searxng/searxng:2026.5.10-df1f24fb7"
+    secrets:
+      codecov-token:
+        required: true
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -121,3 +124,9 @@ jobs:
         with:
           recreate: true
           path: pr-comment.md
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.codecov-token }}
