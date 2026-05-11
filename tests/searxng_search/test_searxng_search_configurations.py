@@ -1,5 +1,7 @@
 """Tests for SearXNGBaseConfiguration and SearXNGSearchConfiguration dataclasses."""
 
+import math
+
 import pytest
 from pydantic import ValidationError
 
@@ -61,7 +63,8 @@ def test_base_configuration_stores_all_fields():
 def test_base_configuration_timeout_defaults_to_30():
     """Test that timeout defaults to 30.0 when not provided."""
     config = SearXNGBaseConfiguration(base_url="https://searxng.example.com")
-    assert config.timeout == 30.0
+    assert config.timeout is not None
+    assert math.isclose(config.timeout, 30.0, rel_tol=1e-9)
 
 
 def test_base_configuration_accepts_custom_timeout():
@@ -69,7 +72,8 @@ def test_base_configuration_accepts_custom_timeout():
     config = SearXNGBaseConfiguration(
         base_url="https://searxng.example.com", timeout=15.0
     )
-    assert config.timeout == 15.0
+    assert config.timeout is not None
+    assert math.isclose(config.timeout, 15.0, rel_tol=1e-9)
 
 
 def test_base_configuration_accepts_none_timeout():
