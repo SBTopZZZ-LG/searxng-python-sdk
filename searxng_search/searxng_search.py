@@ -1,8 +1,8 @@
 """SearXNG Search Module Implementation."""
 
 import asyncio
-from enum import StrEnum
 import random
+from enum import StrEnum
 from urllib.parse import quote
 
 import httpx
