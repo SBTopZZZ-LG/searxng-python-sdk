@@ -1,4 +1,4 @@
-"""Integration tests: rate limiting retry logic using a controlled mock HTTP server.
+"""Unit tests: rate limiting retry logic using a controlled mock HTTP server.
 
 Each test spins up a real TCP server in a background thread. The server returns 429
 for the first ``fail_count`` requests, then returns a minimal valid 200 response.
