@@ -36,11 +36,15 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create and push tag
+      - name: Create and push tags
         if: steps.tag_check.outputs.exists == 'false'
         run: |
           git tag "${{ steps.version.outputs.tag }}"
           git push origin "${{ steps.version.outputs.tag }}"
+
+          # Move the `latest` tag to the current commit
+          git tag -f latest
+          git push origin latest --force
 
       - name: Build changelog
         id: changelog
