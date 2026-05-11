@@ -1,5 +1,8 @@
 """Integration tests: verify the parser correctly identifies result types per category."""
 
+import os
+
+import httpx
 import pytest
 
 from searxng_search.searxng_search import (
@@ -12,6 +15,7 @@ from searxng_search.searxng_search import (
     MusicResult,
     ScienceResult,
     SearXNG,
+    SearXNGBaseConfiguration,
     SearXNGSearchConfiguration,
     SocialMediaResult,
     VideoResult,
@@ -160,3 +164,15 @@ async def test_social_media_results_parsed_correctly(searxng_client: SearXNG):
 
     assert len(response.search_results) > 0
     assert all(isinstance(r, SocialMediaResult) for r in response.search_results)
+
+
+@pytest.mark.integration
+async def test_search_raises_on_timeout():
+    """A near-zero timeout causes search() to raise httpx.RequestError."""
+    base_url = os.environ.get("SEARXNG_BASE_URL", "http://localhost:8080")
+    tiny_timeout_client = SearXNG(
+        base_configuration=SearXNGBaseConfiguration(base_url=base_url, timeout=0.001)
+    )
+
+    with pytest.raises(httpx.RequestError):
+        await tiny_timeout_client.search(SearXNGSearchConfiguration(query="python"))

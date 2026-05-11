@@ -58,6 +58,37 @@ def test_base_configuration_stores_all_fields():
     assert config.user_agent == user_agent
 
 
+def test_base_configuration_timeout_defaults_to_30():
+    """Test that timeout defaults to 30.0 when not provided."""
+    config = SearXNGBaseConfiguration(base_url="https://searxng.example.com")
+    assert config.timeout == 30.0
+
+
+def test_base_configuration_accepts_custom_timeout():
+    """Test that a valid positive timeout value is accepted."""
+    config = SearXNGBaseConfiguration(
+        base_url="https://searxng.example.com", timeout=15.0
+    )
+    assert config.timeout == 15.0
+
+
+def test_base_configuration_accepts_none_timeout():
+    """Test that None is accepted for timeout (disables timeout)."""
+    config = SearXNGBaseConfiguration(
+        base_url="https://searxng.example.com", timeout=None
+    )
+    assert config.timeout is None
+
+
+@pytest.mark.parametrize("timeout", [0.0, -1.0, -100.0])
+def test_base_configuration_rejects_non_positive_timeout(timeout: float):
+    """Test that a zero or negative timeout raises ValidationError."""
+    with pytest.raises(ValidationError):
+        SearXNGBaseConfiguration(
+            base_url="https://searxng.example.com", timeout=timeout
+        )
+
+
 # ---------------------------------------------------------------------------
 # SearXNGSearchConfiguration
 # ---------------------------------------------------------------------------

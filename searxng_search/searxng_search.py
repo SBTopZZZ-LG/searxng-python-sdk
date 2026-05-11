@@ -85,10 +85,17 @@ class SearXNGBaseConfiguration:
 
     Attributes:
         base_url: The base URL of the SearXNG instance.
+        user_agent: Optional custom User-Agent string to use for search requests.
+        timeout: Optional timeout in seconds for search requests. Defaults to 30 seconds.
     """
 
     base_url: _HttpUrl
     user_agent: str | None = None
+    timeout: float | None = Field(
+        default=30.0,
+        gt=0,
+        description="Timeout in seconds for search requests. Must be greater than 0.",
+    )
 
 
 @dataclass
@@ -595,8 +602,7 @@ class SearXNG:
         elif search_configuration.custom_headers is not None:
             headers = search_configuration.custom_headers
 
-        # TODO: Make timeout configurable via SearXNGBaseConfiguration/SearXNGSearchConfiguration
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=self.base_configuration.timeout) as client:
             try:
                 response = await client.get(
                     search_url,

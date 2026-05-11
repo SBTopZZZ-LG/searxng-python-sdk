@@ -14,6 +14,7 @@ async def main():
     base_config = SearXNGBaseConfiguration(
         base_url="http://localhost:8080",
         user_agent="SearXNG Python SDK Example/0.1",
+        timeout=15.0,
     )
 
     search_config = SearXNGSearchConfiguration(

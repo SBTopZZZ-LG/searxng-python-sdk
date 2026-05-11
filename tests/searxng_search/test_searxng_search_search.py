@@ -194,3 +194,53 @@ async def test_search_log_errors_decorator_logs_on_exception(searxng_client: Sea
                 await searxng_client.search(SearXNGSearchConfiguration(query="python"))
 
     mock_log_error.assert_called_once()
+
+
+def _patch_async_client(mock_get: AsyncMock):
+    """Patch httpx.AsyncClient so the constructor is inspectable and get() returns mock_get."""
+    mock_instance = MagicMock()
+    mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
+    mock_instance.__aexit__ = AsyncMock(return_value=False)
+    mock_instance.get = mock_get
+    return patch(
+        "searxng_search.searxng_search.httpx.AsyncClient", return_value=mock_instance
+    )
+
+
+async def test_search_passes_default_timeout_to_async_client(searxng_client: SearXNG):
+    """Test that search() creates AsyncClient with the default 30.0s timeout."""
+    mock_get = AsyncMock(return_value=_make_mock_response())
+    with _patch_async_client(mock_get) as MockClient:
+        await searxng_client.search(SearXNGSearchConfiguration(query="python"))
+
+    MockClient.assert_called_once_with(timeout=30.0)
+
+
+async def test_search_passes_custom_timeout_to_async_client():
+    """Test that search() creates AsyncClient with a custom timeout from base config."""
+    client = SearXNG(
+        base_configuration=SearXNGBaseConfiguration(
+            base_url="https://searxng.example.com",
+            timeout=5.0,
+        )
+    )
+    mock_get = AsyncMock(return_value=_make_mock_response())
+    with _patch_async_client(mock_get) as MockClient:
+        await client.search(SearXNGSearchConfiguration(query="python"))
+
+    MockClient.assert_called_once_with(timeout=5.0)
+
+
+async def test_search_passes_none_timeout_to_async_client():
+    """Test that search() creates AsyncClient with timeout=None when configured."""
+    client = SearXNG(
+        base_configuration=SearXNGBaseConfiguration(
+            base_url="https://searxng.example.com",
+            timeout=None,
+        )
+    )
+    mock_get = AsyncMock(return_value=_make_mock_response())
+    with _patch_async_client(mock_get) as MockClient:
+        await client.search(SearXNGSearchConfiguration(query="python"))
+
+    MockClient.assert_called_once_with(timeout=None)
