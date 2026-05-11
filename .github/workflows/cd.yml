@@ -1,0 +1,107 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Read version from pyproject.toml
+        id: version
+        run: |
+          VERSION=$(grep -m1 '^version' pyproject.toml | sed 's/.*= *"\(.*\)"/\1/')
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag already exists
+        id: tag_check
+        run: |
+          if git ls-remote --tags origin "refs/tags/${{ steps.version.outputs.tag }}" | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create and push tag
+        if: steps.tag_check.outputs.exists == 'false'
+        run: |
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: Build changelog
+        id: changelog
+        if: steps.tag_check.outputs.exists == 'false'
+        run: |
+          CURRENT_TAG="${{ steps.version.outputs.tag }}"
+
+          # Find the previous version tag, if any
+          PREV_TAG=$(git tag --sort=-version:refname \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | grep -v "^${CURRENT_TAG}$" \
+            | head -n 1)
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "First release — collecting all commits."
+            COMMITS=$(git log --pretty=format:"%s" HEAD)
+          else
+            echo "Collecting commits since ${PREV_TAG}."
+            COMMITS=$(git log --pretty=format:"%s" "${PREV_TAG}..HEAD")
+          fi
+
+          FEATURES=""
+          CHANGES=""
+          BUGFIXES=""
+          MISC=""
+
+          while IFS= read -r msg; do
+            [ -z "$msg" ] && continue
+            if echo "$msg" | grep -qiE '^feat(\(.+\))?!?:'; then
+              FEATURES="${FEATURES}- ${msg}\n"
+            elif echo "$msg" | grep -qiE '^refactor(\(.+\))?!?:'; then
+              CHANGES="${CHANGES}- ${msg}\n"
+            elif echo "$msg" | grep -qiE '^fix(\(.+\))?!?:'; then
+              BUGFIXES="${BUGFIXES}- ${msg}\n"
+            else
+              MISC="${MISC}- ${msg}\n"
+            fi
+          done <<< "$COMMITS"
+
+          BODY=""
+          if [ -n "$FEATURES" ]; then
+            BODY="${BODY}## Features\n${FEATURES}\n"
+          fi
+          if [ -n "$CHANGES" ]; then
+            BODY="${BODY}## Changes\n${CHANGES}\n"
+          fi
+          if [ -n "$BUGFIXES" ]; then
+            BODY="${BODY}## Bug Fixes\n${BUGFIXES}\n"
+          fi
+          if [ -n "$MISC" ]; then
+            BODY="${BODY}## Misc\n${MISC}\n"
+          fi
+
+          # Write to file to avoid multiline quoting issues
+          printf "%b" "$BODY" > release_notes.md
+          echo "notes_file=release_notes.md" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        if: steps.tag_check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          body_path: ${{ steps.changelog.outputs.notes_file }}
