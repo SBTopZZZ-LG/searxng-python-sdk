@@ -55,6 +55,8 @@ jobs:
     with:
       python-version: "3.11"
       searxng-image: "searxng/searxng:2026.5.10-df1f24fb7"
+    secrets:
+      codecov_token: ${{ secrets.CODECOV_TOKEN }}
 
   pass:
     name: CI Pass
